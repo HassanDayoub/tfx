@@ -20,7 +20,7 @@ TF_VERSION = '1.13.1'
 
 # LINT.IfChange
 BEAM_VERSION = '2.12.0'
-# LINT.ThenChange(setup_beam_on_flink.sh)
+# LINT.ThenChange(setup_beam_on_flink.sh, setup_beam_on_spark.sh)
 
 if __name__ == '__main__':
   setuptools.setup(
