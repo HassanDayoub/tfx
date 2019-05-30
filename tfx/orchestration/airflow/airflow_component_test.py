@@ -24,6 +24,8 @@ from airflow.operators import dummy_operator
 import mock
 import tensorflow as tf
 
+from tfx.components.trainer import driver
+from tfx.components.trainer import executor
 from tfx.orchestration.airflow import airflow_component
 from tfx.orchestration.airflow import airflow_pipeline
 from tfx.utils import logging_utils
@@ -215,44 +217,30 @@ class AirflowComponentTest(tf.test.TestCase):
         parent_dag=tfx_worker,
         docker_operator_cfg=self.parent_dag.docker_operator_cfg)
 
+  @mock.patch('airflow.operators.python_operator.BranchPythonOperator')
+  @mock.patch('airflow.operators.python_operator.PythonOperator')
   @mock.patch('tfx.orchestration.airflow.airflow_adapter.AirflowAdapter')
-  @mock.patch('tfx.orchestration.airflow.airflow_component._TfxWorker')
-  def test_airflow_component(self, mock_tfx_worker_class,
-                             mock_airflow_adapter_class):
+  def test_airflow_component(self, mock_airflow_adapter_class,
+                             mock_python_operator_class,
+                             mock_branch_python_operator_class):
     mock_airflow_adapter = mock.Mock()
     mock_airflow_adapter.check_cache_and_maybe_prepare_execution = 'check_cache'
     mock_airflow_adapter.python_exec = 'python_exec'
     mock_airflow_adapter.publish_exec = 'publish_exec'
     mock_airflow_adapter_class.return_value = mock_airflow_adapter
-    mock_tfx_worker_class.return_value = models.DAG(
-        dag_id='pipeline_name.component_name.unique_name',
-        start_date=datetime.datetime(2019, 1, 1))
 
-    component = airflow_component.Component(
+    # Ensure the new component is added to the dag
+    component_count = len(self.parent_dag.subdags)
+    _ = airflow_component.Component(
         parent_dag=self.parent_dag,
-        component_name='component_name',
-        unique_name='unique_name',
-        driver=None,
-        executor=None,
+        component_name='test_component',
+        unique_name='test_component_unique_name',
+        driver=driver.Driver,
+        executor=executor.Executor,
         input_dict=self.input_dict,
         output_dict=self.output_dict,
         exec_properties=self.exec_properties)
-
-    mock_tfx_worker_class.assert_called_with(
-        component_name='component_name',
-        task_id='pipeline_name.component_name.unique_name',
-        parent_dag=self.parent_dag,
-        input_dict=self.input_dict,
-        output_dict=self.output_dict,
-        exec_properties=self.exec_properties,
-        driver_options=mock.ANY,
-        driver_class=None,
-        executor_class=None,
-        additional_pipeline_args=None,
-        metadata_connection_config=self.parent_dag.metadata_connection_config,
-        logger_config=mock.ANY)
-
-    self.assertItemsEqual(component.upstream_list, [])
+    self.assertEqual(len(self.parent_dag.subdags), component_count+1)
 
 
 if __name__ == '__main__':
