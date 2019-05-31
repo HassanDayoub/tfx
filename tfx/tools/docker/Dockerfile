@@ -47,4 +47,5 @@ RUN CFLAGS=$(/usr/bin/python3.5-config --cflags) pip install $(find dist -name "
 
 RUN /tfx-src/tfx/tools/docker/license.sh /tfx-src/tfx/tools/docker/third_party_licenses.csv /third_party/licenses
 
+ENV TFX_SRC_DIR=/tfx-src
 ENTRYPOINT ["python3.5", "/tfx-src/tfx/scripts/run_executor.py"]
